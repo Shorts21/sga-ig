@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Gestão Agrícola",
+  "description": "Um sistema de gestão operacional agrícola com um mapa interativo para visualização e simulação de dados de pivôs.",
+  "requestFramePermissions": []
+}
