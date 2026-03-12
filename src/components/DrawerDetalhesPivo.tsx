@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pivot, Colaborador } from '../types';
+import { Pivot, Colaborador, ConfiguracoesLegais } from '../types';
 import { supabase } from '../services/supabase';
 import SimulationPanel from './SimulationPanel';
 
@@ -7,9 +7,19 @@ interface DrawerDetalhesPivoProps {
   pivo: Pivot | null;
   onClose: () => void;
   onUpdate: () => void;
+  simulacaoTemp: Record<string, number>;
+  setSimulacaoTemp: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  legalSettings: ConfiguracoesLegais | null;
 }
 
-const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, onUpdate }) => {
+const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({
+  pivo,
+  onClose,
+  onUpdate,
+  simulacaoTemp,
+  setSimulacaoTemp,
+  legalSettings
+}) => {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Pivot>>({});
   const [activeTab, setActiveTab] = useState<'details' | 'simulation'>('details');
@@ -21,7 +31,7 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
         const { data, error } = await supabase
           .from('colaboradores')
           .select('*')
-          .eq('pivo_id', pivo.pivo_id);
+          .eq('pivo_nome', pivo.pivo_nome);
         if (error) {
           console.error('Error fetching collaborators:', error);
         } else {
@@ -39,7 +49,7 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
       trabalhadores_min: pivo.trabalhadores_min || 0,
       trabalhadores_ideal: pivo.trabalhadores_ideal || 0,
       trabalhadores_max: pivo.trabalhadores_max || 0,
-      trabalhadores_atual: pivo.trabalhadores_atual || pivo.headcount || 0, // Default to headcount if not set
+      trabalhadores_atual: pivo.trabalhadores_atual || pivo.headcount || 0,
       custos_adicionais: pivo.custos_adicionais || 0,
     });
     setEditing(true);
@@ -79,13 +89,16 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
     }
   };
 
+  const simulatedHeadcount = (pivo.headcount || 0) + (simulacaoTemp[pivo.pivo_id] || 0);
+  const hasSimulation = (simulacaoTemp[pivo.pivo_id] || 0) !== 0;
+
   return (
     <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">{pivo.pivo_nome}</h2>
           <div className="flex items-center space-x-2">
-            <button 
+            <button
               onClick={handleDelete}
               className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
               title="Excluir Pivô"
@@ -120,20 +133,33 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
 
         {activeTab === 'details' ? (
           <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Dados Gerais</h3>
+            <div className={`p-4 rounded-lg border transition-all ${hasSimulation ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-transparent'}`}>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Dados Operacionais</h3>
+                {hasSimulation && <span className="text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">Simulação</span>}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500">Área (ha)</p>
                   <p className="font-medium">{pivo.area_ha?.toFixed(2)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Headcount Atual</p>
-                  <p className="font-medium">{pivo.headcount || 0}</p>
+                  <p className="text-xs text-gray-500">Headcount</p>
+                  <p className={`font-bold ${hasSimulation ? 'text-blue-600' : 'text-slate-900'}`}>
+                    {simulatedHeadcount}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Custo Estimado</p>
-                  <p className="font-medium">R$ {pivo.custo_total_calculado?.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500">Custo Mensal</p>
+                  <p className={`font-bold ${hasSimulation ? 'text-blue-600' : 'text-slate-900'}`}>
+                    R$ {pivo.custo_total_calculado?.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Custo / ha</p>
+                  <p className={`font-bold ${hasSimulation ? 'text-blue-600' : 'text-slate-900'}`}>
+                    R$ {pivo.custo_por_hectare?.toFixed(0)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -149,7 +175,7 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
                           <p className="font-medium text-gray-800">{c.nome}</p>
                           <p className="text-xs text-gray-500">{c.cargo}</p>
                         </div>
-                        <p className="font-mono text-xs text-gray-600">R$ {c.salario.toFixed(2)}</p>
+                        <p className="font-mono text-xs text-gray-600">R$ {Number(c.salario_base || legalSettings?.salario_minimo || 1621).toFixed(2)}</p>
                       </li>
                     ))}
                   </ul>
@@ -163,7 +189,7 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Parâmetros Operacionais</h3>
                 {!editing && (
-                  <button 
+                  <button
                     onClick={handleEdit}
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                   >
@@ -262,7 +288,12 @@ const DrawerDetalhesPivo: React.FC<DrawerDetalhesPivoProps> = ({ pivo, onClose, 
             </div>
           </div>
         ) : (
-          <SimulationPanel pivo={pivo} />
+          <SimulationPanel
+            pivo={pivo}
+            simulacaoTemp={simulacaoTemp}
+            setSimulacaoTemp={setSimulacaoTemp}
+            legalSettings={legalSettings}
+          />
         )}
       </div>
     </div>

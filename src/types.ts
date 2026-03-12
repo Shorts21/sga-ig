@@ -27,6 +27,7 @@ export interface Colaborador {
   cargo: string;
   salario: number;
   pivo_id: string;
+  pivo_nome?: string;
   // New fields
   salario_base: number;
   bonus_fixo: number;
@@ -34,6 +35,14 @@ export interface Colaborador {
   tipo_atividade_id: string;
   custo_empresa_calculado: number;
   data_admissao?: string;
+}
+
+export interface Cultura {
+  id: string;
+  nome: string;
+  fator_ha_por_pessoa: number;
+  descricao: string;
+  ativo: boolean;
 }
 
 export interface Pivot {
@@ -49,6 +58,10 @@ export interface Pivot {
   trabalhadores_max?: number;
   trabalhadores_atual?: number;
   custos_adicionais?: number;
+  cultura_id?: string;
+  fase_atual?: string;
+  data_inicio_ciclo?: string;
+  data_fim_prevista?: string;
 }
 
 export interface Poligonal {
@@ -63,4 +76,14 @@ export interface Colaborador {
   cargo: string;
   salario: number;
   pivo_id: string;
+  pivo_nome?: string;
+}
+export interface PivotGeo {
+  id?: string;
+  nome: string;
+  area_ha: number;
+  tipo: 'polygon' | 'circle';
+  geometry?: [number, number][]; // [lat, lng] para polígonos
+  centro?: [number, number];     // [lat, lng] para círculos
+  raio_m?: number;              // raio em metros
 }

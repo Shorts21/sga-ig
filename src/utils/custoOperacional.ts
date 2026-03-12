@@ -12,7 +12,7 @@ export function calcularCustoPivo({
   areaHa: number;
 }) {
   const salarioEfetivo = salarioBase;
-  const custoMensal = headcount * salarioEfetivo * (1 + adicionaisPercentual/100) * (1 + encargosPercentual/100);
+  const custoMensal = headcount * salarioEfetivo * (1 + adicionaisPercentual / 100) * (1 + encargosPercentual / 100);
 
   return {
     custoTotal: custoMensal,
